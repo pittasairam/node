@@ -1,0 +1,81 @@
+name: CI Node.js Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      TARGE_ENVIRONMENT:
+        type: environment
+        default: dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.TARGE_ENVIRONMENT }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'  # Adjust version as needed
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build  # Ensure your project has a build script
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: nodejs-build
+          path: dist/  # Adjust to your build output folder
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test  # Ensure your project has a test script
+
+  package:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v5.0.0
+        with:
+          name: nodejs-build
+          path: staging
+
+      - name: List downloaded files
+        run: ls staging
+
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    needs: package
+
+    steps:
+      - name: Deployment Step
+        run: |
+          echo "Deploying Node.js application..."
+          echo "Environment: ${{ inputs.TARGE_ENVIRONMENT }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
